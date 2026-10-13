@@ -911,3 +911,105 @@ select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1p
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 .sheet-head h2:focus { outline: none; }
+
+/* ── "Everyone's times" fold-out under the chart ─ */
+
+.everyone summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-2);
+  list-style: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.everyone summary::-webkit-details-marker { display: none; }
+.everyone summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 0.15s ease;
+}
+.everyone[open] summary::after { transform: rotate(-135deg) translateY(-2px); }
+.everyone[open] summary { margin-bottom: 10px; }
+.everyone summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+.wd-short { display: none; }
+
+/* ── Phones: compact rows so the page is quick to scan ─ */
+
+@media (max-width: 520px) {
+  .site-header { padding-top: 20px; }
+  h1 { font-size: 2.1rem; }
+  section { margin-top: 20px; }
+  .panel { padding: 16px 14px; }
+  .section-head { margin-bottom: 10px; }
+
+  /* the longer explanations are obvious once you've seen the page */
+  .world .section-head .hint,
+  .panel > .hint:not(.sheet .hint) { display: none; }
+  .world .section-head { margin-bottom: 24px; }
+  .overlap-summary { margin-bottom: 24px; font-size: 0.86rem; }
+
+  .cards { grid-template-columns: 1fr; gap: 6px; }
+
+  .card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "avatar name name time"
+      "avatar place status day";
+    column-gap: 10px;
+    row-gap: 2px;
+    align-items: center;
+    padding: 9px 12px;
+    border-radius: 16px;
+  }
+  .card-top, .card-foot { display: contents; }
+  .card-top .avatar { grid-area: avatar; width: 38px; height: 38px; }
+  .sky-arc, .card-offset, .card-tag { display: none; }
+
+  .card-name {
+    grid-area: name;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-name .nick { display: inline; margin-left: 5px; }
+
+  .card-place { grid-area: place; margin: 0; }
+
+  .card-time {
+    grid-area: time;
+    margin: 0;
+    font-size: 1.5rem;
+    text-align: right;
+  }
+
+  .status {
+    grid-area: status;
+    justify-self: end;
+    padding: 1px 7px;
+    font-size: 0.66rem;
+    gap: 4px;
+  }
+  .status::before { width: 5px; height: 5px; }
+
+  .card-day {
+    grid-area: day;
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .wd-long { display: none; }
+  .wd-short { display: inline; }
+
+  .card.error { display: block; }
+}

@@ -3,7 +3,7 @@
 
   // Must match <meta name="app-version"> in index.html. If the browser paired this file
   // with a cached page from a different version, reload once so they match again.
-  const APP_VERSION = "2026-10-13.3";
+  const APP_VERSION = "2026-10-13.4";
   const pageVersionMeta = document.querySelector('meta[name="app-version"]');
   const pageVersion = pageVersionMeta ? pageVersionMeta.content : "";
   if (pageVersion !== APP_VERSION) {
@@ -104,6 +104,8 @@
   const fmtTime = (d, tz) => formatter(tz, { hour: "numeric", minute: "2-digit" }).format(d);
   const fmtHour = (d, tz) => formatter(tz, { hour: "numeric" }).format(d);
   const fmtWeekday = (d, tz) => formatter(tz, { weekday: "long" }).format(d);
+  const fmtShortWeekday = (d, tz) => formatter(tz, { weekday: "short" }).format(d);
+  const shortRel = (rel) => rel.replace("tomorrow", "+1d").replace("yesterday", "−1d");
   const fmtShortDay = (d, tz) => formatter(tz, { weekday: "short", month: "short", day: "numeric" }).format(d);
 
   function tzAbbrev(date, tz) {
@@ -386,8 +388,10 @@
       el.querySelector(".sky-arc").innerHTML = arcSvg(minute);
       el.querySelector(".card-place").textContent = person.place + " · " + tzAbbrev(now, tz);
       el.querySelector(".card-time").textContent = fmtTime(now, tz);
-      el.querySelector(".card-day").innerHTML = escapeHtml(fmtWeekday(now, tz)) +
-        (rel ? ' <span class="rel">(' + rel + ")</span>" : "");
+      // Full weekday for cards; short "Wed +1d" for the compact phone rows.
+      el.querySelector(".card-day").innerHTML =
+        '<span class="wd-long">' + escapeHtml(fmtWeekday(now, tz)) + (rel ? ' <span class="rel">(' + rel + ")</span>" : "") + "</span>" +
+        '<span class="wd-short">' + escapeHtml(fmtShortWeekday(now, tz)) + (rel ? ' <span class="rel">' + shortRel(rel) + "</span>" : "") + "</span>";
       const status = el.querySelector(".status");
       status.className = "status " + (isAwake ? "is-awake" : "is-asleep");
       status.textContent = isAwake ? "awake" : "asleep";
@@ -530,6 +534,9 @@
   const bestBandEl = document.getElementById("best-band");
   let slots = [];
   let selectedSlot = null; // start time (ms) of the selected hour, kept across refreshes
+  // "Everyone's times" starts open on big screens, folded on phones, then remembers your choice.
+  let chipsOpenChoice = null;
+  const chipsOpen = () => chipsOpenChoice !== null ? chipsOpenChoice : !window.matchMedia("(max-width: 639px)").matches;
 
   function computeSlots(now) {
     const start = new Date(now);
@@ -635,7 +642,7 @@
       return '<li class="chip' + (isAwake ? "" : " asleep") + '">' +
         '<span class="' + (isAwake ? "is-awake" : "is-asleep") + '">' + (isAwake ? ICON_SUN : ICON_MOON) + "</span>" +
         "<span>" + escapeHtml(p.name) + '</span><span class="t">' + escapeHtml(fmtTime(slot.time, p.timezone)) +
-        (rel ? " " + rel.replace("tomorrow", "+1d").replace("yesterday", "−1d") : "") + "</span></li>";
+        (rel ? " " + shortRel(rel) : "") + "</span></li>";
     }).join("");
     const stack = ordered.filter((p) => awakeIds.has(p.id)).map((p) => avatarHtml(p)).join("");
 
@@ -649,7 +656,9 @@
         (stack ? '<span class="stack">' + stack + "</span>" : "") +
         '<span class="stack-count"><strong>' + slot.count + "</strong> of " + validPeople.length + " awake</span>" +
       "</div>" +
-      '<ul class="chips">' + chips + "</ul>";
+      '<details class="everyone"' + (chipsOpen() ? " open" : "") + '><summary>Everyone\'s times</summary>' +
+        '<ul class="chips">' + chips + "</ul></details>";
+    detailEl.querySelector(".everyone").addEventListener("toggle", (e) => { chipsOpenChoice = e.target.open; });
     detailEl.querySelector("#use-in-converter").addEventListener("click", () => {
       setConverter("me", slot.time);
       openConverter();
