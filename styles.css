@@ -286,9 +286,9 @@ section { margin-top: 28px; }
 
 .scrubber {
   position: sticky;
-  top: 8px;
+  bottom: 8px;
   z-index: 5;
-  margin-bottom: 12px;
+  margin-top: 12px;
   padding: 10px 14px 8px;
   border-radius: 16px;
   background: var(--surface);
