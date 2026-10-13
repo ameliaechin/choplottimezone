@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="What time is it for everyone in the group chat?">
+  <title>choplot time</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <h1>choplot time</h1>
+    <p class="you" id="you-line"></p>
+  </header>
+
+  <main>
+    <section aria-labelledby="now-heading">
+      <div class="section-head">
+        <h2 id="now-heading">Right now</h2>
+        <p class="hint" id="awake-count"></p>
+      </div>
+      <div class="cards" id="cards"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="overlap-heading">
+      <div class="section-head">
+        <h2 id="overlap-heading">Best overlap · next 24 hours</h2>
+      </div>
+      <p class="hint">Bars show how many people are awake (8am–11pm their time) each hour. Times are <strong>your</strong> local time. Tap a bar for details.</p>
+      <p class="overlap-summary" id="overlap-summary"></p>
+      <div class="chart">
+        <div class="bars" id="overlap-bars"></div>
+        <div class="axis" id="overlap-axis" aria-hidden="true"></div>
+      </div>
+      <div class="overlap-detail" id="overlap-detail" aria-live="polite"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="conv-heading" id="converter">
+      <div class="section-head">
+        <h2 id="conv-heading">Time converter</h2>
+      </div>
+      <p class="hint">Pick a time in anyone's timezone to see it for everyone.</p>
+      <div class="conv-inputs">
+        <label class="field field-wide">
+          <span>In whose time?</span>
+          <select id="conv-person"></select>
+        </label>
+        <label class="field">
+          <span>Date</span>
+          <input type="date" id="conv-date" required>
+        </label>
+        <label class="field">
+          <span>Time</span>
+          <input type="time" id="conv-time" required>
+        </label>
+      </div>
+      <div class="conv-actions">
+        <button type="button" class="btn" id="conv-now">Reset to now</button>
+        <button type="button" class="btn btn-primary" id="conv-copy">Copy for the chat</button>
+      </div>
+      <p class="conv-note" id="conv-note" role="status"></p>
+      <ul class="conv-results" id="conv-results"></ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Times update live and handle daylight saving automatically.</p>
+  </footer>
+
+  <script src="people.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
