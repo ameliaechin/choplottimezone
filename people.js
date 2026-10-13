@@ -24,7 +24,7 @@ const PEOPLE = [
   { name: "bia",                  place: "Brazil",        timezone: "America/Sao_Paulo" },
   { name: "el",                   place: "UK",            timezone: "Europe/London" },
   { name: "char",                 place: "France",        timezone: "Europe/Paris" },
-  { name: "val",                  place: "Italy / Spain", timezone: "Europe/Rome" },
+  { name: "val",                  place: "Colombia",      timezone: "America/Bogota" },
   { name: "maria (kidsmanlover)", place: "Austria",       timezone: "Europe/Vienna" },
   { name: "maria (beyoncé)",      place: "Netherlands",   timezone: "Europe/Amsterdam" },
   { name: "vynn",                 place: "Singapore",     timezone: "Asia/Singapore" },

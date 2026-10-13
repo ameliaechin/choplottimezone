@@ -449,6 +449,28 @@
   document.getElementById("conv-now").addEventListener("click", () => setConverter(convPerson.value, new Date()));
   convCopy.addEventListener("click", copyConversion);
 
+  // ── Theme toggle (auto / light / dark) ─────────────────────────────────
+
+  const themeButtons = document.querySelectorAll("[data-theme-choice]");
+
+  function showThemeChoice(choice) {
+    themeButtons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.themeChoice === choice)));
+  }
+
+  function setTheme(choice) {
+    const root = document.documentElement;
+    if (choice === "light" || choice === "dark") root.dataset.theme = choice;
+    else delete root.dataset.theme;
+    try {
+      if (choice === "light" || choice === "dark") localStorage.setItem("theme", choice);
+      else localStorage.removeItem("theme");
+    } catch (e) { /* private mode etc. — the choice just won't be remembered */ }
+    showThemeChoice(choice);
+  }
+
+  themeButtons.forEach((b) => b.addEventListener("click", () => setTheme(b.dataset.themeChoice)));
+  showThemeChoice(document.documentElement.dataset.theme || "auto");
+
   // ── Live updates ───────────────────────────────────────────────────────
 
   let lastMinute = null;
