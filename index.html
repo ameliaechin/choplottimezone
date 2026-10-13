@@ -4,12 +4,29 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <meta name="description" content="What time is it for everyone in the group chat?">
+  <meta name="robots" content="noindex">
+  <meta name="description" content="What time is it for everyone in the group chat? Live clocks, who's awake, and the best time to call.">
+  <meta name="theme-color" content="#f6f4f1" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0e0d14" media="(prefers-color-scheme: dark)">
   <title>choplot time</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
+
+  <!-- Link preview when the URL is pasted into a chat -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="choplot time">
+  <meta property="og:description" content="What time is it for everyone in the group chat? Live clocks, who's awake, and the best time to call.">
+  <meta property="og:url" content="https://ameliaechin.github.io/choplottimezone/">
+  <meta property="og:image" content="https://ameliaechin.github.io/choplottimezone/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="choplot time: a sky that fades from night to day to dusk">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap">
   <link rel="stylesheet" href="styles.css">
   <script>
     // Apply a saved light/dark choice before the page paints, so it doesn't flash.
@@ -43,10 +60,26 @@
   </header>
 
   <main>
+    <section class="panel world" aria-labelledby="world-heading">
+      <div class="section-head">
+        <h2 id="world-heading">Around the world</h2>
+        <p class="hint">Everyone placed at their local time of day. Tap someone to find their card.</p>
+      </div>
+      <div class="world-band" id="world-band"></div>
+      <div class="world-ticks" id="world-ticks" aria-hidden="true"></div>
+    </section>
+
     <section aria-labelledby="now-heading">
       <div class="section-head">
         <h2 id="now-heading">Right now</h2>
         <p class="hint" id="awake-count"></p>
+      </div>
+      <div class="scrubber" id="scrubber">
+        <div class="scrub-row">
+          <label for="scrub" class="scrub-label" id="scrub-text">Drag to look ahead</label>
+          <button type="button" class="btn btn-small" id="scrub-reset" hidden>Back to now</button>
+        </div>
+        <input type="range" id="scrub" min="0" max="96" step="1" value="0" aria-describedby="scrub-text">
       </div>
       <div class="cards" id="cards"></div>
     </section>
@@ -58,6 +91,7 @@
       <p class="hint">Bars show how many people are awake (8am–11pm their time) each hour. Times are <strong>your</strong> local time. Tap a bar for details.</p>
       <p class="overlap-summary" id="overlap-summary"></p>
       <div class="chart">
+        <div class="best-band" id="best-band" hidden><span>best</span></div>
         <div class="bars" id="overlap-bars"></div>
         <div class="axis" id="overlap-axis" aria-hidden="true"></div>
       </div>

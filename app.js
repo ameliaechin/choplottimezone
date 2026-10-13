@@ -118,25 +118,160 @@
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  // What the sky looks like at a local hour; drives each card's gradient.
-  function skyPhase(hour) {
-    if (hour < 5) return "night";
-    if (hour < 7) return "dawn";
-    if (hour < 10) return "morning";
-    if (hour < 17) return "day";
-    if (hour < 19) return "golden";
-    if (hour < 21) return "dusk";
-    return "night";
+  function localMinute(date, tz) {
+    const p = zonedParts(date, tz);
+    return p.hour * 60 + p.minute;
+  }
+
+  // ── Sky colors ─────────────────────────────────────────────────────────
+  // The sky at each local minute of the day, blended smoothly between these
+  // keyframes: [minute of day, top-of-sky color, horizon color].
+  const SKY = [
+    [0,    "#0f1433", "#232a5c"],
+    [270,  "#141a40", "#2a2f66"], // 4:30 still night
+    [345,  "#2c2f6e", "#a3587a"], // 5:45 first light
+    [405,  "#6a7fc4", "#ffb38a"], // 6:45 sunrise
+    [480,  "#a9d1ff", "#ffe6cc"], // 8:00 morning
+    [720,  "#9fd0ff", "#e6f4ff"], // noon
+    [960,  "#b3d8ff", "#fff0d6"], // 4pm
+    [1065, "#ffd39b", "#ffad94"], // 5:45 golden hour
+    [1140, "#7a4f9a", "#f08a6e"], // 7pm sunset
+    [1200, "#3a3075", "#a9506f"], // 8pm dusk
+    [1290, "#18204a", "#2c2f63"], // 9:30 night
+    [1440, "#0f1433", "#232a5c"],
+  ];
+  const DARK_MIX = "#0b0d1e"; // dark mode deepens every sky toward this
+  const INK_DARK = "#13203a";
+
+  // Colors blend in OKLab so sunrise goes peach → gold instead of through gray.
+  function hexToRgb(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  const toLinear = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+  const fromLinear = (c) => {
+    const v = c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+    return Math.round(Math.min(1, Math.max(0, v)) * 255);
+  };
+  function hexToOklab(hex) {
+    const [r, g, b] = hexToRgb(hex).map(toLinear);
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+    const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+    return [
+      0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+      1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+      0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+    ];
+  }
+  function oklabToHex([L, a, b]) {
+    const l = Math.pow(L + 0.3963377774 * a + 0.2158037573 * b, 3);
+    const m = Math.pow(L - 0.1055613458 * a - 0.0638541728 * b, 3);
+    const s = Math.pow(L - 0.0894841775 * a - 1.291485548 * b, 3);
+    const rgb = [
+      4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+      -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+      -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+    ].map(fromLinear);
+    return "#" + rgb.map((v) => v.toString(16).padStart(2, "0")).join("");
+  }
+  function mix(hexA, hexB, t) {
+    const a = hexToOklab(hexA);
+    const b = hexToOklab(hexB);
+    return oklabToHex(a.map((v, i) => v + (b[i] - v) * t));
+  }
+  function luminance(hex) {
+    const [r, g, b] = hexToRgb(hex).map(toLinear);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  const skyCache = new Map();
+  // { top, bottom, mid, lightText, stars, clouds, sunUp } for a local minute of day.
+  function skyAt(minute, dark) {
+    minute = ((Math.round(minute) % 1440) + 1440) % 1440;
+    const key = minute + (dark ? "d" : "l");
+    if (skyCache.has(key)) return skyCache.get(key);
+    let i = 0;
+    while (SKY[i + 1][0] <= minute) i++;
+    const [m0, top0, bot0] = SKY[i];
+    const [m1, top1, bot1] = SKY[i + 1];
+    const t = (minute - m0) / (m1 - m0);
+    let top = mix(top0, top1, t);
+    let bottom = mix(bot0, bot1, t);
+    const dayLum = (luminance(top) + luminance(bottom)) / 2; // how bright the real sky is
+    if (dark) {
+      top = mix(top, DARK_MIX, 0.45);
+      bottom = mix(bottom, DARK_MIX, 0.45);
+    }
+    // Pick the ink that stays most readable against both ends of the gradient.
+    const contrast = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    const lumTop = luminance(top);
+    const lumBottom = luminance(bottom);
+    const inkLum = luminance(INK_DARK);
+    const whiteWorst = Math.min(contrast(1, lumTop), contrast(1, lumBottom));
+    const inkWorst = Math.min(contrast(inkLum, lumTop), contrast(inkLum, lumBottom));
+    const sky = {
+      top: top,
+      bottom: bottom,
+      mid: mix(top, bottom, 0.5),
+      lightText: whiteWorst >= inkWorst,
+      stars: Math.max(0, Math.min(1, (0.16 - dayLum) / 0.1)),
+      clouds: Math.max(0, Math.min(1, (dayLum - 0.4) / 0.15)),
+      sunUp: minute >= 360 && minute < 1080,
+    };
+    skyCache.set(key, sky);
+    return sky;
+  }
+
+  function applySky(el, sky) {
+    el.style.setProperty("--card-bg", "linear-gradient(160deg, " + sky.top + " 0%, " + sky.bottom + " 100%)");
+    el.style.setProperty("--card-fg", sky.lightText ? "#fff" : INK_DARK);
+    el.style.setProperty("--card-fg-2", sky.lightText ? "rgba(255,255,255,0.78)" : "rgba(19,32,58,0.7)");
+    el.style.setProperty("--card-pill", sky.lightText ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.55)");
+    el.style.setProperty("--stars", sky.stars.toFixed(2));
+    el.style.setProperty("--clouds", sky.clouds.toFixed(2));
+  }
+
+  function isDarkTheme() {
+    const t = document.documentElement.dataset.theme;
+    if (t === "dark") return true;
+    if (t === "light") return false;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+
+  // A little arc with the sun (6am–6pm) or moon (6pm–6am) at its spot in the sky.
+  function arcSvg(minute) {
+    const sunUp = minute >= 360 && minute < 1080;
+    const t = sunUp ? (minute - 360) / 720 : (((minute - 1080) + 1440) % 1440) / 720;
+    const angle = Math.PI * (1 - t);
+    const x = (22 + 17 * Math.cos(angle)).toFixed(1);
+    const y = (21 - 17 * Math.sin(angle)).toFixed(1);
+    const body = sunUp
+      ? '<circle cx="' + x + '" cy="' + y + '" r="6" fill="#ffc93c" opacity="0.35"/><circle cx="' + x + '" cy="' + y + '" r="3.6" fill="#ffc93c"/>'
+      : '<path d="M' + x + " " + (y - 4.2).toFixed(1) + " A4.2 4.2 0 1 0 " + x + " " + (+y + 4.2).toFixed(1) +
+        " A2.6 4.2 0 1 1 " + x + " " + (y - 4.2).toFixed(1) + 'Z" fill="#ffe8a3"/>';
+    return '<svg viewBox="0 0 44 24" aria-hidden="true">' +
+      '<path d="M5 21 A17 17 0 0 1 39 21" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="2 2.5" opacity="0.45"/>' +
+      '<line x1="2" y1="21.5" x2="42" y2="21.5" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>' +
+      body + "</svg>";
   }
 
   // Avatar colors, assigned in people.js order so each friend keeps their color.
   const AVATAR_COLORS = ["#2a78d6", "#d95926", "#12936a", "#b97a00", "#c94a7c", "#1f7a1f", "#6250d6", "#d23b3a", "#0f8a9e"];
 
-  function avatarHtml(person) {
-    const initial = Array.from(person.name.trim())[0] || "?";
-    return '<span class="avatar" style="--avatar:' + person.color + '" aria-hidden="true">' +
-      escapeHtml(initial.toUpperCase()) + "</span>";
+  // Photo if there is one; otherwise their emoji or first initial on their color.
+  // A photo that fails to load is removed, revealing the initial underneath.
+  function avatarHtml(person, extraClass) {
+    const face = person.emoji || (Array.from(person.name.trim())[0] || "?").toUpperCase();
+    return '<span class="avatar' + (person.emoji ? " has-emoji" : "") + (extraClass ? " " + extraClass : "") +
+      '" style="--avatar:' + person.color + '" aria-hidden="true">' + escapeHtml(face) +
+      (person.photo ? '<img src="' + escapeHtml(person.photo) + '" alt="" loading="lazy" decoding="async">' : "") +
+      "</span>";
   }
+  document.addEventListener("error", (e) => {
+    const img = e.target;
+    if (img && img.tagName === "IMG" && img.parentElement && img.parentElement.classList.contains("avatar")) img.remove();
+  }, true);
 
   // ── Load people ────────────────────────────────────────────────────────
 
@@ -150,6 +285,9 @@
       place: p.place ? String(p.place) : (p.timezone ? cityFromTz(String(p.timezone)) : ""),
       valid: isValidTimeZone(String(p.timezone || "")),
       color: AVATAR_COLORS[i % AVATAR_COLORS.length],
+      emoji: p.emoji ? String(p.emoji) : "",
+      photo: p.photo ? String(p.photo) : "",
+      tag: p.tag ? String(p.tag) : "",
     }));
   const validPeople = people.filter((p) => p.valid);
 
@@ -180,10 +318,12 @@
     const el = document.createElement("article");
     el.className = "card";
     el.innerHTML =
+      '<span class="sky-fx" aria-hidden="true"><span class="stars"></span><span class="clouds"></span></span>' +
       '<div class="card-top">' + avatarHtml(person) +
         '<div class="card-name"></div>' +
-        '<span class="sky-icon" aria-hidden="true"></span>' +
+        '<span class="sky-arc" aria-hidden="true"></span>' +
       "</div>" +
+      (person.tag ? '<div class="card-tag"></div>' : "") +
       '<div class="card-place"></div>' +
       '<div class="card-time"></div>' +
       '<div class="card-day"></div>' +
@@ -194,6 +334,7 @@
       ? escapeHtml(nick[1]) + '<span class="nick">' + escapeHtml(nick[2]) + "</span>"
       : escapeHtml(person.name);
     el.querySelector(".card-place").textContent = person.place;
+    if (person.tag) el.querySelector(".card-tag").textContent = person.tag;
     if (!person.valid) {
       el.classList.add("error");
       el.querySelector(".card-time").textContent = "Unknown timezone";
@@ -205,6 +346,7 @@
 
   function renderCards(now) {
     let awake = 0;
+    const dark = isDarkTheme();
     for (const person of sortedByLocalTime(people, now)) {
       let el = cardEls.get(person.id);
       if (!el) {
@@ -219,9 +361,11 @@
       if (isAwake) awake++;
       const rel = relDayLabel(dayDiff(now, tz, viewerTz));
 
-      const phase = skyPhase(zonedParts(now, tz).hour);
-      el.className = "card phase-" + phase + (isAwake ? "" : " asleep");
-      el.querySelector(".sky-icon").innerHTML = phase === "day" || phase === "morning" || phase === "golden" ? ICON_SUN : ICON_MOON;
+      const minute = localMinute(now, tz);
+      const sky = skyAt(minute, dark);
+      applySky(el, sky);
+      el.classList.toggle("asleep", !isAwake);
+      el.querySelector(".sky-arc").innerHTML = arcSvg(minute);
       el.querySelector(".card-place").textContent = person.place + " · " + tzAbbrev(now, tz);
       el.querySelector(".card-time").textContent = fmtTime(now, tz);
       el.querySelector(".card-day").innerHTML = escapeHtml(fmtWeekday(now, tz)) +
@@ -239,12 +383,133 @@
       : "No one yet — add friends in people.js";
   }
 
+  // ── World strip: everyone placed along one day, midnight to midnight ───
+
+  const bandEl = document.getElementById("world-band");
+  const ticksEl = document.getElementById("world-ticks");
+  const smallStrip = () => window.matchMedia("(max-width: 520px)").matches;
+
+  function hourLabel(h) {
+    return fmtHour(new Date(Date.UTC(2020, 0, 1, h)), "UTC").replace(/\s?([AP])M/i, (m, x) => x.toLowerCase());
+  }
+
+  function renderWorld(now) {
+    const dark = isDarkTheme();
+    const stops = [];
+    for (let m = 0; m <= 1440; m += 30) stops.push(skyAt(m, dark).mid + " " + (m / 14.4).toFixed(2) + "%");
+    bandEl.style.background = "linear-gradient(90deg, " + stops.join(", ") + ")";
+
+    // Stack people who'd overlap into lanes so every avatar stays visible.
+    const AVATAR_PX = smallStrip() ? 24 : 30;
+    const LANE_PX = AVATAR_PX + 4;
+    const width = bandEl.clientWidth || 340;
+    const gapPct = ((AVATAR_PX * 0.85) / width) * 100; // a little overlap is fine
+    const placed = validPeople
+      .map((p) => ({ person: p, minute: localMinute(now, p.timezone) }))
+      .sort((a, b) => a.minute - b.minute || a.person.name.localeCompare(b.person.name));
+    const laneEnds = [];
+    for (const item of placed) {
+      item.pct = (item.minute / 1440) * 100;
+      let lane = laneEnds.findIndex((end) => item.pct - end >= gapPct);
+      if (lane < 0) { lane = laneEnds.length; laneEnds.push(0); }
+      laneEnds[lane] = item.pct;
+      item.lane = lane;
+    }
+    const lanes = Math.max(2, laneEnds.length);
+    bandEl.style.height = lanes * LANE_PX + 16 + "px";
+
+    const youPct = (localMinute(now, viewerTz) / 1440) * 100;
+    bandEl.innerHTML =
+      '<span class="world-you" style="left:' + youPct.toFixed(2) + '%"><span>you</span></span>' +
+      placed.map((item) => {
+        const p = item.person;
+        const label = p.name + ": " + fmtTime(now, p.timezone) + " " + fmtWeekday(now, p.timezone);
+        return '<button type="button" class="world-dot" data-id="' + p.id + '" title="' + escapeHtml(label) + '" aria-label="' + escapeHtml(label) + '" ' +
+          'style="left:clamp(' + (AVATAR_PX / 2 + 2) + "px, " + item.pct.toFixed(2) + "%, calc(100% - " + (AVATAR_PX / 2 + 2) + 'px));top:' + (8 + item.lane * LANE_PX) + 'px">' +
+          avatarHtml(p) + "</button>";
+      }).join("");
+
+    if (!ticksEl.childElementCount) {
+      ticksEl.innerHTML = [0, 6, 12, 18, 24].map((h) =>
+        '<span style="left:' + (h / 24) * 100 + '%">' + escapeHtml(hourLabel(h % 24)) + "</span>").join("");
+    }
+  }
+
+  bandEl.addEventListener("click", (e) => {
+    const dot = e.target.closest(".world-dot");
+    if (!dot) return;
+    const card = cardEls.get(+dot.dataset.id);
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card.classList.remove("flash");
+    void card.offsetWidth; // restart the animation if tapped twice
+    card.classList.add("flash");
+  });
+
+  // Page glow takes on the colors of your own sky right now.
+  function renderGlow(now) {
+    const dark = isDarkTheme();
+    const sky = skyAt(localMinute(now, viewerTz), false);
+    const alpha = dark ? 0.16 : 0.34;
+    const toRgba = (hex, a) => "rgba(" + hexToRgb(hex).join(", ") + ", " + a + ")";
+    document.body.style.setProperty("--glow-1", toRgba(sky.bottom, alpha));
+    document.body.style.setProperty("--glow-2", toRgba(sky.top, alpha * 0.9));
+  }
+
+  // ── Time scrubber: drag to see everyone later today ────────────────────
+
+  const scrubEl = document.getElementById("scrub");
+  const scrubText = document.getElementById("scrub-text");
+  const scrubReset = document.getElementById("scrub-reset");
+  const nowHeading = document.getElementById("now-heading");
+  const SCRUB_STEP = 15 * 60000;
+
+  function scrubOffset() {
+    return (+scrubEl.value || 0) * SCRUB_STEP;
+  }
+
+  function viewTime() {
+    return new Date(Date.now() + scrubOffset());
+  }
+
+  function renderScrubLabel(t) {
+    const mins = scrubOffset() / 60000;
+    if (!mins) {
+      scrubText.textContent = "Drag to look ahead";
+      nowHeading.textContent = "Right now";
+      scrubReset.hidden = true;
+      return;
+    }
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const ahead = (h ? h + "h" : "") + (h && m ? " " : "") + (m ? m + "m" : "");
+    scrubText.innerHTML = "<strong>+" + ahead + "</strong> · " + escapeHtml(fmtShortDay(t, viewerTz)) + ", " +
+      escapeHtml(fmtTime(t, viewerTz)) + " your time";
+    nowHeading.textContent = "In " + ahead;
+    scrubReset.hidden = false;
+  }
+
+  function renderScrubbed() {
+    const t = viewTime();
+    renderScrubLabel(t);
+    renderCards(t);
+    renderWorld(t);
+    renderGlow(t);
+  }
+
+  scrubEl.addEventListener("input", renderScrubbed);
+  scrubReset.addEventListener("click", () => {
+    scrubEl.value = 0;
+    renderScrubbed();
+  });
+
   // ── Overlap chart ──────────────────────────────────────────────────────
 
   const barsEl = document.getElementById("overlap-bars");
   const axisEl = document.getElementById("overlap-axis");
   const summaryEl = document.getElementById("overlap-summary");
   const detailEl = document.getElementById("overlap-detail");
+  const bestBandEl = document.getElementById("best-band");
   let slots = [];
   let selectedSlot = null; // start time (ms) of the selected hour, kept across refreshes
 
@@ -285,12 +550,16 @@
 
     barsEl.innerHTML = "";
     axisEl.innerHTML = "";
+    const dark = isDarkTheme();
     slots.forEach((slot, i) => {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "bar" + (slot.count === max && max > 0 ? " best" : "");
       const pct = total ? (slot.count / total) * 100 : 0;
-      b.innerHTML = '<span class="bar-count">' + slot.count + '</span><span class="bar-fill" style="height:calc((100% - 16px) * ' + pct / 100 + ')"></span>';
+      // Each bar wears the sky (in your timezone) at the middle of its hour.
+      const sky = skyAt(localMinute(slot.time, viewerTz) + 30, dark);
+      b.innerHTML = '<span class="bar-count">' + slot.count + '</span><span class="bar-fill" style="height:calc((100% - 18px) * ' + pct / 100 +
+        ");background:linear-gradient(180deg, " + sky.top + ", " + sky.bottom + ')"></span>';
       b.setAttribute("aria-label", fmtShortDay(slot.time, viewerTz) + " " + fmtTime(slot.time, viewerTz) +
         ": " + slot.count + " of " + total + " awake");
       b.dataset.index = i;
@@ -304,6 +573,15 @@
       axisEl.appendChild(label);
     });
 
+    // One soft band behind the longest best stretch.
+    if (run && max > 0) {
+      bestBandEl.hidden = false;
+      bestBandEl.style.left = "calc(" + run.start + " * (100% + 2px) / 24)";
+      bestBandEl.style.width = "calc(" + (run.end - run.start + 1) + " * (100% + 2px) / 24 - 2px)";
+    } else {
+      bestBandEl.hidden = true;
+    }
+
     if (!total) {
       summaryEl.textContent = "";
     } else if (max === 0) {
@@ -313,8 +591,7 @@
       const to = new Date(slots[run.end].time.getTime() + HOUR);
       summaryEl.innerHTML = "Best: <strong>" + max + " of " + total + "</strong> awake, " +
         escapeHtml(fmtShortDay(from, viewerTz)) + " " +
-        "<strong>" + escapeHtml(fmtTime(from, viewerTz)) + "–" + escapeHtml(fmtTime(to, viewerTz)) + "</strong> your time" +
-        (max < total ? " (no hour has everyone awake)" : "");
+        "<strong>" + escapeHtml(fmtTime(from, viewerTz)) + "–" + escapeHtml(fmtTime(to, viewerTz)) + "</strong> your time";
     }
 
     // Keep the selected hour if it's still in the window; otherwise default to the best hour.
@@ -333,7 +610,8 @@
     });
 
     const awakeIds = new Set(slot.awake.map((p) => p.id));
-    const chips = sortedByLocalTime(validPeople, slot.time).map((p) => {
+    const ordered = sortedByLocalTime(validPeople, slot.time);
+    const chips = ordered.map((p) => {
       const isAwake = awakeIds.has(p.id);
       const rel = relDayLabel(dayDiff(slot.time, p.timezone, viewerTz));
       return '<li class="chip' + (isAwake ? "" : " asleep") + '">' +
@@ -341,13 +619,17 @@
         "<span>" + escapeHtml(p.name) + '</span><span class="t">' + escapeHtml(fmtTime(slot.time, p.timezone)) +
         (rel ? " " + rel.replace("tomorrow", "+1d").replace("yesterday", "−1d") : "") + "</span></li>";
     }).join("");
+    const stack = ordered.filter((p) => awakeIds.has(p.id)).map((p) => avatarHtml(p)).join("");
 
     detailEl.innerHTML =
       '<div class="detail-head">' +
         '<div class="detail-title">' + escapeHtml(fmtShortDay(slot.time, viewerTz)) + ", " +
-          escapeHtml(fmtTime(slot.time, viewerTz)) + ' <span class="muted">your time · ' +
-          slot.count + " of " + validPeople.length + " awake</span></div>" +
+          escapeHtml(fmtTime(slot.time, viewerTz)) + ' <span class="muted">your time</span></div>' +
         '<button type="button" class="btn btn-small" id="use-in-converter">Open in converter</button>' +
+      "</div>" +
+      '<div class="stack-row">' +
+        (stack ? '<span class="stack">' + stack + "</span>" : "") +
+        '<span class="stack-count"><strong>' + slot.count + "</strong> of " + validPeople.length + " awake</span>" +
       "</div>" +
       '<ul class="chips">' + chips + "</ul>";
     detailEl.querySelector("#use-in-converter").addEventListener("click", () => {
@@ -481,7 +763,7 @@
     if (force || minuteKey !== lastMinute) {
       lastMinute = minuteKey;
       renderHeader(now);
-      renderCards(now);
+      renderScrubbed(); // cards, world strip, and glow follow the scrubber (or now)
     }
     const hourKey = new Date(now).setMinutes(0, 0, 0);
     if (force || hourKey !== lastHour) {
@@ -495,4 +777,15 @@
   tick(true);
   setInterval(tick, 1000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(true); });
+
+  // Sky colors differ between light and dark, so redraw when either changes.
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => tick(true));
+  themeButtons.forEach((b) => b.addEventListener("click", () => tick(true)));
+
+  // The world strip packs avatars by pixel width, so re-pack after resizing.
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => renderWorld(viewTime()), 150);
+  });
 })();

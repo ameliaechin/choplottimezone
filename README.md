@@ -15,6 +15,9 @@ Everything lives in **`people.js`**. Each friend is one line:
 - **name**: what shows on their card. Anything in parentheses, like `"maria (beyoncé)"`, shows as a smaller nickname under the name, which helps tell two people with the same name apart.
 - **timezone**: an [IANA timezone name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) (the "TZ identifier" column). Pick the city nearest to them that's in the same timezone, e.g. `America/New_York` for North Carolina.
 - **place** *(optional)*: the label under their name. If you leave it out, the city from the timezone is used.
+- **photo** *(optional)*: a profile picture in the `photos/` folder, e.g. `"photos/liya.jpg"`. If the file is missing, their initial shows instead.
+- **emoji** *(optional)*: shown in their bubble instead of their initial when there's no photo, e.g. `"🦢"`.
+- **tag** *(optional)*: a tiny label on their card, such as a group joke, e.g. `"🎶 music girl"`.
 
 To **add** someone, copy a line, change it, and keep the comma at the end. To **remove** someone, delete their line. Order doesn't matter, because the site sorts everyone by local time.
 
@@ -26,6 +29,12 @@ Countries with more than one timezone use these defaults, so change them if they
 - Australia: `Australia/Sydney` (others include `Australia/Melbourne`, `Australia/Brisbane` and `Australia/Perth`)
 
 **becca** is in the list but commented out (the line starts with `//`) until we know her US timezone. Once you know it, delete the `//` and set her timezone to `America/New_York`, `America/Chicago`, `America/Denver` or `America/Los_Angeles`.
+
+## Link preview and icons
+
+- `og-image.png` is the picture that shows when the link is pasted into a chat.
+- `favicon.svg` and `apple-touch-icon.png` are the browser tab icon and the iPhone home-screen icon.
+- Chat apps cache link previews, so a changed image can take a while to show up.
 
 ## Other tweaks
 
