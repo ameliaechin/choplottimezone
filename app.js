@@ -735,10 +735,6 @@
     if (typeof convDialog.close === "function") convDialog.close();
     else convDialog.removeAttribute("open");
   }
-  document.getElementById("open-converter").addEventListener("click", () => {
-    setConverter(convPerson.value, new Date());
-    openConverter();
-  });
   document.getElementById("conv-close").addEventListener("click", closeConverter);
   // Tapping the dimmed area outside the sheet closes it.
   convDialog.addEventListener("click", (e) => { if (e.target === convDialog) closeConverter(); });
