@@ -625,7 +625,7 @@
       '<div class="detail-head">' +
         '<div class="detail-title">' + escapeHtml(fmtShortDay(slot.time, viewerTz)) + ", " +
           escapeHtml(fmtTime(slot.time, viewerTz)) + ' <span class="muted">your time</span></div>' +
-        '<button type="button" class="btn btn-small" id="use-in-converter">Open in converter</button>' +
+        '<button type="button" class="btn btn-small" id="use-in-converter">Time converter</button>' +
       "</div>" +
       '<div class="stack-row">' +
         (stack ? '<span class="stack">' + stack + "</span>" : "") +
