@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <meta name="robots" content="noindex">
+  <!-- Bump this (and APP_VERSION in app.js, and the ?v= on the files below) when the code changes,
+       so browsers fetch the new files instead of mixing in old cached ones. -->
+  <meta name="app-version" content="2026-10-13.3">
   <meta name="description" content="What time is it for everyone in the group chat? Live clocks, who's awake, and the best time to call.">
   <meta name="theme-color" content="#f6f4f1" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0e0d14" media="(prefers-color-scheme: dark)">
@@ -27,7 +30,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2026-10-13.3">
   <script>
     // Apply a saved light/dark choice before the page paints, so it doesn't flash.
     try {
@@ -39,7 +42,7 @@
 <body>
   <header class="site-header">
     <div class="header-row">
-      <p class="eyebrow">the group chat clock</p>
+      <h1>choplot <span class="h1-accent">time</span></h1>
       <div class="theme-toggle" role="group" aria-label="Color theme">
         <button type="button" data-theme-choice="auto" title="Match my device" aria-label="Auto: match my device">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/></svg>
@@ -55,7 +58,6 @@
         </button>
       </div>
     </div>
-    <h1>choplot <span class="h1-accent">time</span></h1>
     <p class="you" id="you-line"></p>
   </header>
 
@@ -136,7 +138,7 @@
     <p>Times update live and handle daylight saving automatically.</p>
   </footer>
 
-  <script src="people.js"></script>
-  <script src="app.js"></script>
+  <script src="people.js?v=2026-10-13.3"></script>
+  <script src="app.js?v=2026-10-13.3"></script>
 </body>
 </html>

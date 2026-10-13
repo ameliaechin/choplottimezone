@@ -41,6 +41,15 @@ Countries with more than one timezone use these defaults, so change them if they
 - **Awake hours** (8am–11pm) are set at the top of `app.js` (`AWAKE_FROM` / `AWAKE_UNTIL`).
 - **Site title** is in `index.html` (`<title>` and `<h1>`).
 
+## Updating the code
+
+GitHub Pages lets browsers keep old copies of files for up to 10 minutes. If you change `app.js` or `styles.css`, bump the version number in all three places so everyone gets matching new files:
+- the `app-version` tag in `index.html`
+- the `?v=` on the file links at the top and bottom of `index.html`
+- `APP_VERSION` at the top of `app.js`
+
+Editing `people.js` doesn't need this. At worst, someone sees the old list for a few minutes.
+
 ## Preview locally
 
 Open `index.html` in a browser. No server is needed.

@@ -116,7 +116,6 @@ h2 { font-size: 1.15rem; font-weight: 750; }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 6px;
 }
 
 .theme-toggle {

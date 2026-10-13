@@ -1,6 +1,24 @@
 (function () {
   "use strict";
 
+  // Must match <meta name="app-version"> in index.html. If the browser paired this file
+  // with a cached page from a different version, reload once so they match again.
+  const APP_VERSION = "2026-10-13.3";
+  const pageVersionMeta = document.querySelector('meta[name="app-version"]');
+  const pageVersion = pageVersionMeta ? pageVersionMeta.content : "";
+  if (pageVersion !== APP_VERSION) {
+    const key = "reloaded-for-" + APP_VERSION;
+    let alreadyTried = false;
+    try {
+      alreadyTried = sessionStorage.getItem(key) === "1";
+      sessionStorage.setItem(key, "1");
+    } catch (e) { alreadyTried = true; /* can't remember, so don't risk a reload loop */ }
+    if (!alreadyTried) {
+      location.reload();
+      return;
+    }
+  }
+
   // Awake hours, in each person's local time: from 8:00 up to (not including) 23:00.
   const AWAKE_FROM = 8;
   const AWAKE_UNTIL = 23;
