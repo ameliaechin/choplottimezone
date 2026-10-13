@@ -56,7 +56,13 @@
       </div>
     </div>
     <h1>choplot <span class="h1-accent">time</span></h1>
-    <p class="you" id="you-line"></p>
+    <div class="you-row">
+      <p class="you" id="you-line"></p>
+      <button type="button" class="btn btn-primary plan-btn" id="open-converter">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+        Plan a time
+      </button>
+    </div>
   </header>
 
   <main>
@@ -98,9 +104,15 @@
       <div class="overlap-detail" id="overlap-detail" aria-live="polite"></div>
     </section>
 
-    <section class="panel" aria-labelledby="conv-heading" id="converter">
-      <div class="section-head">
-        <h2 id="conv-heading">Time converter</h2>
+  </main>
+
+  <dialog class="sheet" id="converter" aria-labelledby="conv-heading">
+    <div class="sheet-inner">
+      <div class="sheet-head">
+        <h2 id="conv-heading" tabindex="-1" autofocus>Plan a time</h2>
+        <button type="button" class="sheet-close" id="conv-close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
       </div>
       <p class="hint">Pick a time in anyone's timezone to see it for everyone.</p>
       <div class="conv-inputs">
@@ -123,8 +135,8 @@
       </div>
       <p class="conv-note" id="conv-note" role="status"></p>
       <ul class="conv-results" id="conv-results"></ul>
-    </section>
-  </main>
+    </div>
+  </dialog>
 
   <footer class="site-footer">
     <p>Times update live and handle daylight saving automatically.</p>

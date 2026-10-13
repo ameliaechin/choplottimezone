@@ -170,7 +170,7 @@ h2 { font-size: 1.15rem; font-weight: 750; }
   display: inline-flex;
   flex-wrap: wrap;
   gap: 4px;
-  margin: 14px 0 0;
+  margin: 0;
   padding: 7px 14px;
   border-radius: 999px;
   background: var(--surface);
@@ -732,6 +732,92 @@ section { margin-top: 28px; }
 .chip .is-awake { color: var(--awake); }
 .chip .is-asleep { color: var(--asleep); }
 
+/* ── Converter pop-up ─────────────────────────── */
+
+.you-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.you-row .you { margin: 0; }
+.plan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  box-shadow: var(--shadow);
+}
+.plan-btn svg { width: 17px; height: 17px; }
+
+.sheet {
+  width: min(560px, 100%);
+  max-width: 100%;
+  max-height: min(88vh, 900px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.sheet::backdrop {
+  background: rgba(14, 12, 30, 0.45);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.sheet[open] { animation: sheet-in 0.22s ease-out; }
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+body:has(.sheet[open]) { overflow: hidden; }
+
+.sheet-inner { padding: 20px 18px 22px; }
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.sheet-head h2 { font-size: 1.3rem; }
+.sheet .hint { margin-bottom: 16px; }
+.sheet-close {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.sheet-close svg { width: 18px; height: 18px; }
+.sheet-close:hover { color: var(--text); }
+.sheet-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Phones: slide up from the bottom like a native sheet */
+@media (max-width: 639px) {
+  .sheet {
+    margin: auto 0 0;
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 24px 24px 0 0;
+    border-bottom: 0;
+  }
+  .sheet[open] { animation-name: sheet-up; }
+  @keyframes sheet-up {
+    from { transform: translateY(40px); opacity: 0.6; }
+    to { transform: none; opacity: 1; }
+  }
+  .sheet-inner { padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
+}
+
 /* ── Converter ────────────────────────────────── */
 
 .conv-inputs {
@@ -841,3 +927,4 @@ select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: 1p
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+.sheet-head h2:focus { outline: none; }

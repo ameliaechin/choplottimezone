@@ -634,7 +634,7 @@
       '<ul class="chips">' + chips + "</ul>";
     detailEl.querySelector("#use-in-converter").addEventListener("click", () => {
       setConverter("me", slot.time);
-      document.getElementById("converter").scrollIntoView({ behavior: "smooth", block: "start" });
+      openConverter();
     });
   }
 
@@ -724,6 +724,24 @@
     }
     setTimeout(() => { convCopy.textContent = original; }, 1500);
   }
+
+  // The converter lives in a pop-up so it stays off the main page.
+  const convDialog = document.getElementById("converter");
+  function openConverter() {
+    if (typeof convDialog.showModal === "function") convDialog.showModal();
+    else convDialog.setAttribute("open", "");
+  }
+  function closeConverter() {
+    if (typeof convDialog.close === "function") convDialog.close();
+    else convDialog.removeAttribute("open");
+  }
+  document.getElementById("open-converter").addEventListener("click", () => {
+    setConverter(convPerson.value, new Date());
+    openConverter();
+  });
+  document.getElementById("conv-close").addEventListener("click", closeConverter);
+  // Tapping the dimmed area outside the sheet closes it.
+  convDialog.addEventListener("click", (e) => { if (e.target === convDialog) closeConverter(); });
 
   convPerson.addEventListener("change", renderConversion);
   convDate.addEventListener("input", renderConversion);
