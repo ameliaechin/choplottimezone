@@ -118,6 +118,26 @@
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
+  // What the sky looks like at a local hour; drives each card's gradient.
+  function skyPhase(hour) {
+    if (hour < 5) return "night";
+    if (hour < 7) return "dawn";
+    if (hour < 10) return "morning";
+    if (hour < 17) return "day";
+    if (hour < 19) return "golden";
+    if (hour < 21) return "dusk";
+    return "night";
+  }
+
+  // Avatar colors, assigned in people.js order so each friend keeps their color.
+  const AVATAR_COLORS = ["#2a78d6", "#d95926", "#12936a", "#b97a00", "#c94a7c", "#1f7a1f", "#6250d6", "#d23b3a", "#0f8a9e"];
+
+  function avatarHtml(person) {
+    const initial = Array.from(person.name.trim())[0] || "?";
+    return '<span class="avatar" style="--avatar:' + person.color + '" aria-hidden="true">' +
+      escapeHtml(initial.toUpperCase()) + "</span>";
+  }
+
   // ── Load people ────────────────────────────────────────────────────────
 
   const rawPeople = typeof PEOPLE !== "undefined" && Array.isArray(PEOPLE) ? PEOPLE : [];
@@ -129,6 +149,7 @@
       timezone: String(p.timezone || ""),
       place: p.place ? String(p.place) : (p.timezone ? cityFromTz(String(p.timezone)) : ""),
       valid: isValidTimeZone(String(p.timezone || "")),
+      color: AVATAR_COLORS[i % AVATAR_COLORS.length],
     }));
   const validPeople = people.filter((p) => p.valid);
 
@@ -159,12 +180,19 @@
     const el = document.createElement("article");
     el.className = "card";
     el.innerHTML =
-      '<div class="card-name"></div>' +
+      '<div class="card-top">' + avatarHtml(person) +
+        '<div class="card-name"></div>' +
+        '<span class="sky-icon" aria-hidden="true"></span>' +
+      "</div>" +
       '<div class="card-place"></div>' +
       '<div class="card-time"></div>' +
       '<div class="card-day"></div>' +
       '<div class="card-foot"><span class="status"></span><span class="card-offset"></span></div>';
-    el.querySelector(".card-name").textContent = person.name;
+    // "maria (beyoncé)" → "maria" with "beyoncé" as a smaller nickname line
+    const nick = /^(.*?)\s*\((.+)\)\s*$/.exec(person.name);
+    el.querySelector(".card-name").innerHTML = nick
+      ? escapeHtml(nick[1]) + '<span class="nick">' + escapeHtml(nick[2]) + "</span>"
+      : escapeHtml(person.name);
     el.querySelector(".card-place").textContent = person.place;
     if (!person.valid) {
       el.classList.add("error");
@@ -191,14 +219,16 @@
       if (isAwake) awake++;
       const rel = relDayLabel(dayDiff(now, tz, viewerTz));
 
-      el.classList.toggle("asleep", !isAwake);
+      const phase = skyPhase(zonedParts(now, tz).hour);
+      el.className = "card phase-" + phase + (isAwake ? "" : " asleep");
+      el.querySelector(".sky-icon").innerHTML = phase === "day" || phase === "morning" || phase === "golden" ? ICON_SUN : ICON_MOON;
       el.querySelector(".card-place").textContent = person.place + " · " + tzAbbrev(now, tz);
       el.querySelector(".card-time").textContent = fmtTime(now, tz);
       el.querySelector(".card-day").innerHTML = escapeHtml(fmtWeekday(now, tz)) +
         (rel ? ' <span class="rel">(' + rel + ")</span>" : "");
       const status = el.querySelector(".status");
       status.className = "status " + (isAwake ? "is-awake" : "is-asleep");
-      status.innerHTML = (isAwake ? ICON_SUN : ICON_MOON) + (isAwake ? "awake" : "asleep");
+      status.textContent = isAwake ? "awake" : "asleep";
       el.querySelector(".card-offset").textContent =
         offsetLabel(offsetMinutes(now, tz) - offsetMinutes(now, viewerTz));
       el.setAttribute("aria-label", person.name + ", " + person.place + ": " + fmtTime(now, tz) + " " +
@@ -269,7 +299,8 @@
       barsEl.appendChild(b);
 
       const label = document.createElement("span");
-      if (i % 3 === 0) label.textContent = fmtHour(slot.time, viewerTz).replace(/\s?([AP])M/i, (m, x) => x.toLowerCase());
+      if (i === 0) label.textContent = "now";
+      else if (i % 3 === 0) label.textContent = fmtHour(slot.time, viewerTz).replace(/\s?([AP])M/i, (m, x) => x.toLowerCase());
       axisEl.appendChild(label);
     });
 
@@ -389,8 +420,8 @@
     }));
     convResults.innerHTML = rows.map((r) =>
       '<li class="conv-row' + (r.awake ? "" : " asleep") + (r.isSource ? " source" : "") + '">' +
-        '<span class="conv-who">' + escapeHtml(r.person.name) +
-          '<span class="place">' + escapeHtml(r.person.place) + (r.awake ? "" : " · asleep") + "</span></span>" +
+        '<span class="conv-who">' + avatarHtml(r.person) + "<span>" + escapeHtml(r.person.name) +
+          '<span class="place">' + escapeHtml(r.person.place) + (r.awake ? "" : " · asleep") + "</span></span></span>" +
         '<span class="conv-when"><span class="time">' + escapeHtml(r.time) + '</span><span class="day">' + escapeHtml(r.day) + "</span></span>" +
       "</li>"
     ).join("");
